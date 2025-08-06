@@ -41,7 +41,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -297,18 +300,54 @@ fun VideoPreviewScreen(uri: Uri, onBack: () -> Unit) {
             exit = fadeOut(animationSpec = tween(1000)),
             modifier = Modifier.align(Alignment.Center)
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = Color.White,
+            Box(
                 modifier = Modifier
                     .size(80.dp)
                     .background(
                         Color.Black.copy(alpha = 0.6f),
                         CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isPlaying) {
+                    // Custom Pause Icon (two vertical bars)
+                    Canvas(
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        val barWidth = size.width * 0.25f
+                        val barHeight = size.height * 0.8f
+                        val spacing = size.width * 0.2f
+                        
+                        // Left bar
+                        drawRect(
+                            color = ComposeColor.White,
+                            topLeft = Offset(
+                                (size.width - 2 * barWidth - spacing) / 2,
+                                (size.height - barHeight) / 2
+                            ),
+                            size = Size(barWidth, barHeight)
+                        )
+                        
+                        // Right bar
+                        drawRect(
+                            color = ComposeColor.White,
+                            topLeft = Offset(
+                                (size.width - 2 * barWidth - spacing) / 2 + barWidth + spacing,
+                                (size.height - barHeight) / 2
+                            ),
+                            size = Size(barWidth, barHeight)
+                        )
+                    }
+                } else {
+                    // Play Icon
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
                     )
-                    .padding(16.dp)
-            )
+                }
+            }
         }
 
         // 🏷️ Video File Name (overlay at bottom)
