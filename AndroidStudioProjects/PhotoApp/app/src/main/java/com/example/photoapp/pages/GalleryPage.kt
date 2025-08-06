@@ -30,12 +30,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,6 +66,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.runtime.*
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -233,6 +240,7 @@ fun VideoPreviewScreen(uri: Uri, onBack: () -> Unit) {
 
     // Track playback state
     var isPlaying by remember { mutableStateOf(true) }
+    var showControls by remember { mutableStateOf(false) }
 
     // Full-screen container
     Box(
@@ -240,70 +248,90 @@ fun VideoPreviewScreen(uri: Uri, onBack: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Main vertical layout
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 🔙 Back Button at top-left
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clickable { onBack() }
-                )
-            }
-
-            // 🎬 Full-width Video View (just like image layout)
-            AndroidView(
-                factory = { ctx ->
-                    VideoView(ctx).apply {
-                        setVideoURI(uri)
-                        setOnPreparedListener {
-                            if (isPlaying) start()
-                        }
-                        setOnCompletionListener {
-                            isPlaying = false
-                        }
+        // 🎬 Full-screen Video View
+        AndroidView(
+            factory = { ctx ->
+                VideoView(ctx).apply {
+                    setVideoURI(uri)
+                    setOnPreparedListener {
+                        if (isPlaying) start()
                     }
+                    setOnCompletionListener {
+                        isPlaying = false
+                    }
+                }
+            },
+            update = { videoView ->
+                if (isPlaying) videoView.start() else videoView.pause()
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable {
+                    isPlaying = !isPlaying
+                    showControls = true
+                    // Hide controls after 2 seconds
+                }
+        )
 
-                },
-                update = { videoView ->
-                    if (isPlaying) videoView.start() else videoView.pause()
-                },
+        // 🔙 Back Button at top-left (overlay)
+        Icon(
+            imageVector = Icons.Default.ArrowBack,
+            contentDescription = "Back",
+            tint = Color.White,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+                .size(30.dp)
+                .clickable { onBack() }
+                .background(
+                    Color.Black.copy(alpha = 0.5f),
+                    CircleShape
+                )
+                .padding(8.dp)
+        )
+
+        // Play/Pause overlay icon that appears when tapping
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(1000)),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = Color.White,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(550.dp)
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(80.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.6f),
+                        CircleShape
+                    )
+                    .padding(16.dp)
             )
+        }
 
-            // ⏯️ Play/Pause Button
-            Button(
-                onClick = { isPlaying = !isPlaying },
-                modifier = Modifier
-                    .padding(top = 16.dp)
-            ) {
-                Text(if (isPlaying) "Pause" else "Play")
-            }
+        // 🏷️ Video File Name (overlay at bottom)
+        Text(
+            text = videoName,
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .background(
+                    Color.Black.copy(alpha = 0.5f),
+                    RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
 
-            // 🏷️ Video File Name
-            Text(
-                text = videoName,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .padding(top = 8.dp, bottom = 24.dp)
-            )
+    // Auto-hide controls after 2 seconds
+    LaunchedEffect(showControls) {
+        if (showControls) {
+            delay(2000)
+            showControls = false
         }
     }
 }
